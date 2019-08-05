@@ -1,0 +1,528 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"/></head><style type="text/css">body { font-family: AvenirNext-Regular; font-size: 11pt;} </style><body><h1>ArangoDB图数据库引擎经验分享</h1>
+<h2>1.<a href="https://www.arangodb.com/docs/stable/">Arango简介</a></h2>
+<p>ArangoDB文档结构及参考场景</p>
+<h3>1.1.<a href="https://www.arangodb.com">AramgoDB定位</a></h3>
+<p><div style="max-width: 3052px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 3052 1774" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="3052" height="1774" xlink:href="assets/puk.png"></image></svg></div></p>
+<p><div style="max-width: 1134px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 1134 726" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="1134" height="726" xlink:href="assets/rgb.png"></image></svg></div></p>
+<p><div style="max-width: 2378px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 2378 804" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="2378" height="804" xlink:href="assets/qgb.png"></image></svg></div></p>
+<h3>1.2.Manual</h3>
+<ul>
+<li>基本概念</li>
+<li>功能描述</li>
+<li>安装配置</li>
+<li>其他相关内容</li>
+</ul>
+<p>使用场景：<br />
+安装及配置时可根据此文档做参考。</p>
+<h3>1.3.AQL</h3>
+<p>Arango查询语言。查询语法相关内容。<br />
+开发过程中，根据接口要求写AQL执行查询时参考。</p>
+<p>实用章节: <a href="https://www.arangodb.com/docs/stable/aql/examples.html">Usual Query Patterns</a></p>
+<h3>1.4.HTTP</h3>
+<p>通过REST API 提供使用以及管理等操作，功能全面。<br />
+应用场景:<br />
+类DDL: Collection 新建，删除，计数，管理SearchView、Graph等相关对象<br />
+类DML:Truncate，批量导入(upsert)</p>
+<h3>1.5.Drivers</h3>
+<p>提供多种语言驱动，类似JDBC。<br />
+应用场景: 在代码中执行AQL查询。</p>
+<h2>2.QuickStart</h2>
+<h3>2.1.安装运行</h3>
+<pre><code class="language-bash">  
+#!/usr/bin/env bash  
+  
+# make host directories  
+mkdir -p ~/data/arangodb  
+  
+docker run -d \  
+    -e ARANGO_NO_AUTH=1 \  
+    -p 8529:8529 \  
+    --name arangodb-instance \  
+    -v ~/data/arangodb/data:/var/lib/arangodb3   
+    arangodb  
+  
+  
+# 企业版：  
+docker run -d -p 8529:8529 \   
+    -e ARANGO_NO_AUTH=1 \  
+    -e ARANGO_LICENSE_KEY=EVALUATION:125f16ada6047bd17eeeefa3f011070510b5fbd9d85122afdeca72c380e7ac83 \  
+    --name arangodb-ee \  
+    -v ~/data/arangodb/data:/var/lib/arangodb3 \  
+    arangodb/enterprise:3.4.7  
+  
+# Ctrl + P + Q  
+</code></pre>
+<p><a href="https://www.arangodb.com/download-arangodb-enterprise/install-enterprise/docker_/">Run ArangoDB Enterprise Edition with Docker</a></p>
+<h3>2.2.WebUI</h3>
+<h3>2.3.数据模型</h3>
+<ul>
+<li>
+<p>database</p>
+</li>
+<li>
+<p>collection</p>
+<ul>
+<li>document
+<ul>
+<li>_id</li>
+<li>_key</li>
+</ul>
+</li>
+<li>edge
+<ul>
+<li>_id</li>
+<li>_key</li>
+<li>_from</li>
+<li>_to</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>view</p>
+<p><div style="max-width: 1400px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 1400 300" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="1400" height="300" xlink:href="assets/crj.png"></image></svg></div></p>
+</li>
+<li>
+<p>graph</p>
+<p><a href="https://www.arangodb.com/docs/stable/graphs.html">Graphs</a></p>
+<ul>
+<li>vertex</li>
+<li>edge</li>
+<li>path</li>
+</ul>
+</li>
+</ul>
+<h3>2.4.AQL示例</h3>
+<p><a href="https://www.arangodb.com/docs/stable/aql/tutorial.html">AQL tutorial</a></p>
+<ul>
+<li>
+<p>CURD</p>
+<ul>
+<li>
+<p><strong><a href="https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#create-documents"><u>Create documents</a></strong></u></p>
+<p>语法：</p>
+<pre><code class="language-sql">INSERT document INTO collectionName  
+</code></pre>
+<p>用例：</p>
+<pre><code class="language-sql">新建Characters  
+INSERT {  
+    &quot;name&quot;: &quot;Ned&quot;,  
+    &quot;surname&quot;: &quot;Stark&quot;,  
+    &quot;alive&quot;: true,  
+    &quot;age&quot;: 41,  
+    &quot;traits&quot;: [&quot;A&quot;,&quot;H&quot;,&quot;C&quot;,&quot;N&quot;,&quot;P&quot;]  
+} INTO Characters  
+</code></pre>
+<p>多个导入：</p>
+<pre><code class="language-sql">LET data = []  
+FOR d IN data  
+    INSERT d INTO Characters  
+</code></pre>
+<p>用例：</p>
+<pre><code class="language-sql">LET data = [  
+    { &quot;name&quot;: &quot;Robert&quot;, &quot;surname&quot;: &quot;Baratheon&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;A&quot;,&quot;H&quot;,&quot;C&quot;] },  
+    { &quot;name&quot;: &quot;Jaime&quot;, &quot;surname&quot;: &quot;Lannister&quot;, &quot;alive&quot;: true, &quot;age&quot;: 36, &quot;traits&quot;: [&quot;A&quot;,&quot;F&quot;,&quot;B&quot;] },  
+    { &quot;name&quot;: &quot;Catelyn&quot;, &quot;surname&quot;: &quot;Stark&quot;, &quot;alive&quot;: false, &quot;age&quot;: 40, &quot;traits&quot;: [&quot;D&quot;,&quot;H&quot;,&quot;C&quot;] },  
+    { &quot;name&quot;: &quot;Cersei&quot;, &quot;surname&quot;: &quot;Lannister&quot;, &quot;alive&quot;: true, &quot;age&quot;: 36, &quot;traits&quot;: [&quot;H&quot;,&quot;E&quot;,&quot;F&quot;] },  
+    { &quot;name&quot;: &quot;Daenerys&quot;, &quot;surname&quot;: &quot;Targaryen&quot;, &quot;alive&quot;: true, &quot;age&quot;: 16, &quot;traits&quot;: [&quot;D&quot;,&quot;H&quot;,&quot;C&quot;] },  
+    { &quot;name&quot;: &quot;Jorah&quot;, &quot;surname&quot;: &quot;Mormont&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;F&quot;] },  
+    { &quot;name&quot;: &quot;Petyr&quot;, &quot;surname&quot;: &quot;Baelish&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;E&quot;,&quot;G&quot;,&quot;F&quot;] },  
+    { &quot;name&quot;: &quot;Viserys&quot;, &quot;surname&quot;: &quot;Targaryen&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;O&quot;,&quot;L&quot;,&quot;N&quot;] },  
+    { &quot;name&quot;: &quot;Jon&quot;, &quot;surname&quot;: &quot;Snow&quot;, &quot;alive&quot;: true, &quot;age&quot;: 16, &quot;traits&quot;: [&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;F&quot;] },  
+    { &quot;name&quot;: &quot;Sansa&quot;, &quot;surname&quot;: &quot;Stark&quot;, &quot;alive&quot;: true, &quot;age&quot;: 13, &quot;traits&quot;: [&quot;D&quot;,&quot;I&quot;,&quot;J&quot;] },  
+    { &quot;name&quot;: &quot;Arya&quot;, &quot;surname&quot;: &quot;Stark&quot;, &quot;alive&quot;: true, &quot;age&quot;: 11, &quot;traits&quot;: [&quot;C&quot;,&quot;K&quot;,&quot;L&quot;] },  
+    { &quot;name&quot;: &quot;Robb&quot;, &quot;surname&quot;: &quot;Stark&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;K&quot;] },  
+    { &quot;name&quot;: &quot;Theon&quot;, &quot;surname&quot;: &quot;Greyjoy&quot;, &quot;alive&quot;: true, &quot;age&quot;: 16, &quot;traits&quot;: [&quot;E&quot;,&quot;R&quot;,&quot;K&quot;] },  
+    { &quot;name&quot;: &quot;Bran&quot;, &quot;surname&quot;: &quot;Stark&quot;, &quot;alive&quot;: true, &quot;age&quot;: 10, &quot;traits&quot;: [&quot;L&quot;,&quot;J&quot;] },  
+    { &quot;name&quot;: &quot;Joffrey&quot;, &quot;surname&quot;: &quot;Baratheon&quot;, &quot;alive&quot;: false, &quot;age&quot;: 19, &quot;traits&quot;: [&quot;I&quot;,&quot;L&quot;,&quot;O&quot;] },  
+    { &quot;name&quot;: &quot;Sandor&quot;, &quot;surname&quot;: &quot;Clegane&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;A&quot;,&quot;P&quot;,&quot;K&quot;,&quot;F&quot;] },  
+    { &quot;name&quot;: &quot;Tyrion&quot;, &quot;surname&quot;: &quot;Lannister&quot;, &quot;alive&quot;: true, &quot;age&quot;: 32, &quot;traits&quot;: [&quot;F&quot;,&quot;K&quot;,&quot;M&quot;,&quot;N&quot;] },  
+    { &quot;name&quot;: &quot;Khal&quot;, &quot;surname&quot;: &quot;Drogo&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;A&quot;,&quot;C&quot;,&quot;O&quot;,&quot;P&quot;] },  
+    { &quot;name&quot;: &quot;Tywin&quot;, &quot;surname&quot;: &quot;Lannister&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;O&quot;,&quot;M&quot;,&quot;H&quot;,&quot;F&quot;] },  
+    { &quot;name&quot;: &quot;Davos&quot;, &quot;surname&quot;: &quot;Seaworth&quot;, &quot;alive&quot;: true, &quot;age&quot;: 49, &quot;traits&quot;: [&quot;C&quot;,&quot;K&quot;,&quot;P&quot;,&quot;F&quot;] },  
+    { &quot;name&quot;: &quot;Samwell&quot;, &quot;surname&quot;: &quot;Tarly&quot;, &quot;alive&quot;: true, &quot;age&quot;: 17, &quot;traits&quot;: [&quot;C&quot;,&quot;L&quot;,&quot;I&quot;] },  
+    { &quot;name&quot;: &quot;Stannis&quot;, &quot;surname&quot;: &quot;Baratheon&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;H&quot;,&quot;O&quot;,&quot;P&quot;,&quot;M&quot;] },  
+    { &quot;name&quot;: &quot;Melisandre&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;G&quot;,&quot;E&quot;,&quot;H&quot;] },  
+    { &quot;name&quot;: &quot;Margaery&quot;, &quot;surname&quot;: &quot;Tyrell&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;M&quot;,&quot;D&quot;,&quot;B&quot;] },  
+    { &quot;name&quot;: &quot;Jeor&quot;, &quot;surname&quot;: &quot;Mormont&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;C&quot;,&quot;H&quot;,&quot;M&quot;,&quot;P&quot;] },  
+    { &quot;name&quot;: &quot;Bronn&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;K&quot;,&quot;E&quot;,&quot;C&quot;] },  
+    { &quot;name&quot;: &quot;Varys&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;M&quot;,&quot;F&quot;,&quot;N&quot;,&quot;E&quot;] },  
+    { &quot;name&quot;: &quot;Shae&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;M&quot;,&quot;D&quot;,&quot;G&quot;] },  
+    { &quot;name&quot;: &quot;Talisa&quot;, &quot;surname&quot;: &quot;Maegyr&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;D&quot;,&quot;C&quot;,&quot;B&quot;] },  
+    { &quot;name&quot;: &quot;Gendry&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;K&quot;,&quot;C&quot;,&quot;A&quot;] },  
+    { &quot;name&quot;: &quot;Ygritte&quot;, &quot;alive&quot;: false, &quot;traits&quot;: [&quot;A&quot;,&quot;P&quot;,&quot;K&quot;] },  
+    { &quot;name&quot;: &quot;Tormund&quot;, &quot;surname&quot;: &quot;Giantsbane&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;C&quot;,&quot;P&quot;,&quot;A&quot;,&quot;I&quot;] },  
+    { &quot;name&quot;: &quot;Gilly&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;L&quot;,&quot;J&quot;] },  
+    { &quot;name&quot;: &quot;Brienne&quot;, &quot;surname&quot;: &quot;Tarth&quot;, &quot;alive&quot;: true, &quot;age&quot;: 32, &quot;traits&quot;: [&quot;P&quot;,&quot;C&quot;,&quot;A&quot;,&quot;K&quot;] },  
+    { &quot;name&quot;: &quot;Ramsay&quot;, &quot;surname&quot;: &quot;Bolton&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;E&quot;,&quot;O&quot;,&quot;G&quot;,&quot;A&quot;] },  
+    { &quot;name&quot;: &quot;Ellaria&quot;, &quot;surname&quot;: &quot;Sand&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;P&quot;,&quot;O&quot;,&quot;A&quot;,&quot;E&quot;] },  
+    { &quot;name&quot;: &quot;Daario&quot;, &quot;surname&quot;: &quot;Naharis&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;K&quot;,&quot;P&quot;,&quot;A&quot;] },  
+    { &quot;name&quot;: &quot;Missandei&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;D&quot;,&quot;L&quot;,&quot;C&quot;,&quot;M&quot;] },  
+    { &quot;name&quot;: &quot;Tommen&quot;, &quot;surname&quot;: &quot;Baratheon&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;I&quot;,&quot;L&quot;,&quot;B&quot;] },  
+    { &quot;name&quot;: &quot;Jaqen&quot;, &quot;surname&quot;: &quot;H'ghar&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;H&quot;,&quot;F&quot;,&quot;K&quot;] },  
+    { &quot;name&quot;: &quot;Roose&quot;, &quot;surname&quot;: &quot;Bolton&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;H&quot;,&quot;E&quot;,&quot;F&quot;,&quot;A&quot;] },  
+    { &quot;name&quot;: &quot;The High Sparrow&quot;, &quot;alive&quot;: true, &quot;traits&quot;: [&quot;H&quot;,&quot;M&quot;,&quot;F&quot;,&quot;O&quot;] }  
+]  
+FOR d IN data  
+    INSERT d INTO Characters  
+</code></pre>
+</li>
+<li>
+<p><strong><a href="https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#read-documents"><u>Read documents</a></strong></u></p>
+<p>遍历：</p>
+<pre><code class="language-sql">FOR c IN Characters  
+    RETURN c  
+</code></pre>
+<p>指定：</p>
+<pre><code class="language-sql">RETURN Document('Characters/1986')  
+RETURN DOCUMENT(&quot;Characters&quot;, &quot;1986&quot;)  
+RETURN DOCUMENT(&quot;Characters&quot;, [&quot;1986&quot;, &quot;2039&quot;])  
+</code></pre>
+</li>
+<li>
+<p><strong><a href="https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#update-documents"><u>Update documents</a></strong></u></p>
+<p>语法：</p>
+<pre><code class="language-sql">  
+UPDATE/REPLACE documentKey WITH object IN collectionName  
+  
+  
+</code></pre>
+<p>用例：</p>
+<pre><code class="language-sql">更新(PATCH)  
+UPDATE &quot;1986&quot; WITH { alive: false } IN Characters  
+替换(PUT)  
+REPLACE &quot;1986&quot; WITH {  
+    name: &quot;Ned&quot;,  
+    surname: &quot;Stark&quot;,  
+    alive: false,  
+    age: 41,  
+    traits: [&quot;A&quot;,&quot;H&quot;,&quot;C&quot;,&quot;N&quot;,&quot;P&quot;]  
+} IN Characters  
+  
+遍历更新  
+FOR c IN Characters  
+    UPDATE c WITH { season: 1 } IN Characters  
+</code></pre>
+</li>
+<li>
+<p><strong><a href="https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#delete-documents"><u>Delete documents</a></strong></u></p>
+<p>语法：</p>
+<pre><code class="language-sql">REMOVE _key IN Characters  
+</code></pre>
+<p>用例：</p>
+<pre><code class="language-sql">REMOVE &quot;2861650&quot; IN Characters  
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>Graph</p>
+<ul>
+<li>
+<p>关系及数据准备</p>
+<p>人物关系：<br />
+<div style="max-width: 800px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 800 317" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="800" height="317" xlink:href="assets/gdq.png"></image></svg></div></p>
+<p>新建Collections<br />
+<div style="max-width: 652px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 652 342" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="652" height="342" xlink:href="assets/fdd.png"></image></svg></div></p>
+<p>数据写入</p>
+<pre><code class="language-sql">LET data = [  
+    {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Ned&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Robb&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Ned&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Sansa&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Ned&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Arya&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Ned&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Bran&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Catelyn&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Robb&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Catelyn&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Sansa&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Catelyn&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Arya&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Catelyn&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Bran&quot;, &quot;surname&quot;: &quot;Stark&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Ned&quot;, &quot;surname&quot;: &quot;Stark&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Jon&quot;, &quot;surname&quot;: &quot;Snow&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Tywin&quot;, &quot;surname&quot;: &quot;Lannister&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Jaime&quot;, &quot;surname&quot;: &quot;Lannister&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Tywin&quot;, &quot;surname&quot;: &quot;Lannister&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Cersei&quot;, &quot;surname&quot;: &quot;Lannister&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Tywin&quot;, &quot;surname&quot;: &quot;Lannister&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Tyrion&quot;, &quot;surname&quot;: &quot;Lannister&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Cersei&quot;, &quot;surname&quot;: &quot;Lannister&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Joffrey&quot;, &quot;surname&quot;: &quot;Baratheon&quot; }  
+    }, {  
+        &quot;parent&quot;: { &quot;name&quot;: &quot;Jaime&quot;, &quot;surname&quot;: &quot;Lannister&quot; },  
+        &quot;child&quot;: { &quot;name&quot;: &quot;Joffrey&quot;, &quot;surname&quot;: &quot;Baratheon&quot; }  
+    }  
+]  
+  
+FOR rel in data  
+    LET parentId = FIRST(  
+        FOR c IN Characters  
+            FILTER c.name == rel.parent.name  
+            FILTER c.surname == rel.parent.surname  
+            LIMIT 1  
+            RETURN c._id  
+    )  
+    LET childId = FIRST(  
+        FOR c IN Characters  
+            FILTER c.name == rel.child.name  
+            FILTER c.surname == rel.child.surname  
+            LIMIT 1  
+            RETURN c._id  
+    )  
+    FILTER parentId != null AND childId != null  
+    INSERT { _from: childId, _to: parentId } INTO ChildOf  
+    RETURN NEW  
+</code></pre>
+</li>
+<li>
+<p><a href="https://www.arangodb.com/docs/stable/aql/graphs-traversals.html">Traversals语法</a></p>
+<p><strong>Working with collection sets</strong></p>
+<pre><code class="language-sql">[WITH vertexCollection1[, vertexCollection2[, ...vertexCollectionN]]]  
+FOR vertex[, edge[, path]]  
+  IN [min[..max]]  
+  OUTBOUND|INBOUND|ANY startVertex  
+  edgeCollection1, ..., edgeCollectionN  
+  [PRUNE pruneCondition]  
+  [OPTIONS options]  
+</code></pre>
+<p><strong>Working with named graphs</strong></p>
+<pre><code class="language-sql">[WITH vertexCollection1[, vertexCollection2[, ...vertexCollectionN]]]  
+FOR vertex[, edge[, path]]  
+  IN [min[..max]]  
+  OUTBOUND|INBOUND|ANY startVertex  
+  GRAPH graphName  
+  [PRUNE pruneCondition]  
+  [OPTIONS options]  
+</code></pre>
+</li>
+<li>
+<p>用例（匿名图）</p>
+<p>场景一： 子 --&gt; 父</p>
+<pre><code class="language-sql">获取Bran的id  
+FOR c IN Characters  
+    FILTER c.name == &quot;Bran&quot;  
+    RETURN c._id  
+获取父节点  
+FOR v IN 1..1 OUTBOUND &quot;Characters/2052&quot; ChildOf  
+    RETURN v.name  
+  
+Bran --&gt; 父节点  
+FOR bran IN Characters  
+    FILTER bran.name == &quot;Bran&quot;  
+    FOR v IN 1..1 OUTBOUND bran ChildOf  
+        RETURN v.name  
+</code></pre>
+<p>场景二： 父 --&gt; 子</p>
+<pre><code class="language-sql">FOR c IN Characters  
+    FILTER c.name == &quot;Ned&quot;  
+    FOR v IN 1..1 INBOUND c ChildOf  
+        RETURN v.name  
+</code></pre>
+<p>场景三： 祖 --&gt; 孙</p>
+<pre><code class="language-sql">FOR c IN Characters  
+    FILTER c.name == &quot;Tywin&quot;  
+    FOR v IN 2..2 INBOUND c ChildOf  
+        RETURN DISTINCT v.name  
+</code></pre>
+<p>遍历深度：min..max<br />
+<div style="max-width: 800px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 800 317" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="800" height="317" xlink:href="assets/esv.png"></image></svg></div></p>
+<pre><code class="language-sql">FOR c IN Characters  
+    FILTER c.name == &quot;Tywin&quot;  
+    FOR v IN 0..2 INBOUND c ChildOf  
+        RETURN DISTINCT v.name  
+</code></pre>
+</li>
+<li>
+<p>图用例</p>
+<p><strong>Working with named graphs</strong></p>
+<pre><code class="language-sql">[WITH vertexCollection1[, vertexCollection2[, ...vertexCollectionN]]]  
+FOR vertex[, edge[, path]]  
+  IN [min[..max]]  
+  OUTBOUND|INBOUND|ANY startVertex  
+  GRAPH graphName  
+  [PRUNE pruneCondition]  
+  [OPTIONS options]  
+</code></pre>
+<p>用例：</p>
+<pre><code>FOR c IN Characters  
+    FILTER c.name == &quot;Tywin&quot;  
+    FOR v IN ANY c GRAPH &quot;GOT&quot;  
+        return v.name  
+</code></pre>
+</li>
+</ul>
+</li>
+</ul>
+<h3>2.5.GraphCourse</h3>
+<p>附件: <a href="assets/jlc.pdf">6.GraphCourse.pdf</a></p>
+<h2>3.Mysql+NiFi+Arango实战</h2>
+<h3>3.1.数据准备</h3>
+<p>mysql数据库：</p>
+<pre><code class="language-bash">mkdir -p ~/data/mysql  
+  
+docker run -v ~/data/mysql:/var/lib/mysql \  
+    --name mysql5.7.24 \  
+    -p3306:3306 \  
+    -e MYSQL_ROOT_PASSWORD=123456@ \  
+    -d mysql:5.7.24  
+</code></pre>
+<p>Northwind DDL+DML：<a href="assets/vhm.sql">附件Northwind.MySQL5.sql</a></p>
+<h3>3.2.Arango Collection</h3>
+<pre><code class="language-json">[  
+  {&quot;name&quot;: &quot;ProductSupplier&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;OrderProduct&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;OrderEmployee&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;TerritoryRegion&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;ProductCategory&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;EmployeeTerritory&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;OrderShipper&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;Categories&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;Customers&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;Employees&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;Orders&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;OrderCustomer&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;Products&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;ReportTo&quot;, &quot;status&quot;: 3, &quot;type&quot;: 3},  
+  {&quot;name&quot;: &quot;Region&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;Shippers&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;Suppliers&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2},  
+  {&quot;name&quot;: &quot;Territories&quot;, &quot;status&quot;: 3, &quot;type&quot;: 2}  
+]  
+</code></pre>
+<h3>3.3.NiFi</h3>
+<ul>
+<li>
+<p>DataModeling.sql<br />
+附件: <a href="assets/mkn.sql">DataModeling_V_E.sql</a></p>
+</li>
+<li>
+<p>arango-northwind.xml<br />
+附件: <a href="assets/xuf.xml">arango-northwind.xml</a></p>
+<p><div style="max-width: 1580px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 1580 1206" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="1580" height="1206" xlink:href="assets/btl.png"></image></svg></div></p>
+<p><div style="max-width: 2696px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 2696 1006" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="2696" height="1006" xlink:href="assets/ouu.png"></image></svg></div></p>
+<p><div style="max-width: 794px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 794 1328" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="794" height="1328" xlink:href="assets/sju.png"></image></svg></div></p>
+</li>
+</ul>
+<h3>3.4.ArangoSearchView</h3>
+<ul>
+<li>
+<p>场景</p>
+<p>输入任意字符串，获取所有与该字符串相匹配的节点信息</p>
+<pre><code>For v in  ${Collections ...}  
+ filter STARTS_WITH(v._search, 'An')  
+ return v  
+  
+</code></pre>
+<p>问题一： AQL无法支持同时指定多个collection<br />
+问题二： Filter 子句无法支持<code>Start_with</code>算子<br />
+<div style="max-width: 1142px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 1142 728" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="1142" height="728" xlink:href="assets/eja.png"></image></svg></div></p>
+</li>
+<li>
+<p>定义</p>
+<pre><code class="language-json">  
+// PUT {{arangodb_ip}}/_db/:database/_api/view/:view-name/properties  
+{  
+  &quot;links&quot;: {  
+    &quot;Suppliers&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Categories&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Products&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Orders&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Shippers&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Customers&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Employees&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Territories&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}},  
+    &quot;Region&quot;: {&quot;fields&quot;: {&quot;_key&quot;: {}, &quot;_id&quot;: {}, &quot;_type&quot;: {}, &quot;_search&quot;: {}}}  
+  }  
+}  
+  
+</code></pre>
+<p><div style="max-width: 2510px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 2510 1208" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="2510" height="1208" xlink:href="assets/rwu.png"></image></svg></div></p>
+</li>
+<li>
+<p>用法</p>
+<p>前缀匹配：</p>
+<pre><code>For v in northwind_view   
+ search STARTS_WITH(v._search, 'An')  
+ return v  
+</code></pre>
+<p><a href="https://www.arangodb.com/docs/stable/aql/views-arango-search.html"> ArangoSearch Views Usage</a></p>
+<p><div style="max-width: 500px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 500 1032" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="500" height="1032" xlink:href="assets/olc.png"></image></svg></div></p>
+</li>
+</ul>
+<h3>3.5.ArangoGraph</h3>
+<ul>
+<li>
+<p>场景</p>
+<p>指定任意起点，获取所有与该起点有关联的节点</p>
+<pre><code class="language-sql">for v,e,p in any ${startVertex} ${edges ...}  
+return v,e,p  
+  
+</code></pre>
+<p><strong>Working with collection sets</strong></p>
+<pre><code class="language-sql">[WITH vertexCollection1[, vertexCollection2[, ...vertexCollectionN]]]  
+FOR vertex[, edge[, path]]  
+  IN [min[..max]]  
+  OUTBOUND|INBOUND|ANY startVertex  
+  edgeCollection1, ..., edgeCollectionN  
+  [PRUNE pruneCondition]  
+  [OPTIONS options]  
+</code></pre>
+<p>不定义Named Graph也能满足。但是调用方需要维护vertexCollection及其关联的edgeCollection，<br />
+并在调用查询时，传入edgeCollection。</p>
+<p>目标：</p>
+<pre><code class="language-sql">for v,e,p in any ${startVertex} ${graph}  
+return v,e,p  
+</code></pre>
+<p>调用方只需要传入起点即可获取所有相关连的edge及targetVertex</p>
+</li>
+<li>
+<p>定义</p>
+<pre><code class="language-json">  
+{  
+    &quot;_key&quot;: &quot;northwind&quot;,  
+    &quot;numberOfShards&quot;: 1,  
+    &quot;replicationFactor&quot;: 1,  
+    &quot;isSmart&quot;: false,  
+    &quot;edgeDefinitions&quot;: [  
+      {&quot;collection&quot;: &quot;ProductSupplier&quot;, &quot;from&quot;: [&quot;Products&quot;], &quot;to&quot;: [&quot;Suppliers&quot;]},  
+      {&quot;collection&quot;: &quot;OrderProduct&quot;, &quot;from&quot;: [&quot;Orders&quot;], &quot;to&quot;: [&quot;Products&quot;]},  
+      {&quot;collection&quot;: &quot;OrderEmployee&quot;, &quot;from&quot;: [&quot;Orders&quot;], &quot;to&quot;: [&quot;Employees&quot;]},  
+      {&quot;collection&quot;: &quot;TerritoryRegion&quot;, &quot;from&quot;: [&quot;Territories&quot;], &quot;to&quot;: [&quot;Region&quot;]},  
+      {&quot;collection&quot;: &quot;ProductCategory&quot;, &quot;from&quot;: [&quot;Products&quot;], &quot;to&quot;: [&quot;Categories&quot;]},  
+      {&quot;collection&quot;: &quot;EmployeeTerritory&quot;, &quot;from&quot;: [&quot;Employees&quot;], &quot;to&quot;: [&quot;Territories&quot;]},  
+      {&quot;collection&quot;: &quot;OrderShipper&quot;, &quot;from&quot;: [&quot;Orders&quot;], &quot;to&quot;: [&quot;Shippers&quot;]},  
+      {&quot;collection&quot;: &quot;OrderCustomer&quot;, &quot;from&quot;: [&quot;Orders&quot;], &quot;to&quot;: [&quot;Customers&quot;]},  
+      {&quot;collection&quot;: &quot;ReportTo&quot;, &quot;from&quot;: [&quot;Employees&quot;], &quot;to&quot;: [&quot;Employees&quot;]}  
+    ],  
+    &quot;orphanCollections&quot;: [],  
+    &quot;_rev&quot;: &quot;_Y7-SQHO---&quot;,  
+    &quot;name&quot;: &quot;northwind&quot;  
+  }  
+  
+</code></pre>
+<p><div style="max-width: 2878px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 2878 1270" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="2878" height="1270" xlink:href="assets/ing.png"></image></svg></div><br />
+<div style="max-width: 2864px; width: 100%; margin-left: auto; margin-right: auto; display: block;"><svg viewBox="0 0 2864 1404" version="1.1" preserveAspectRatio="xMinYMin meet" style="width: 100%;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image width="2864" height="1404" xlink:href="assets/dxa.png"></image></svg></div></p>
+</li>
+<li>
+<p>用法</p>
+<p><a href="https://www.arangodb.com/docs/stable/aql/graphs-traversals.html">Traversals</a></p>
+</li>
+</ul>
+</body></html>
