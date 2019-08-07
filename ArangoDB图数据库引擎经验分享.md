@@ -1,51 +1,50 @@
-# ArangoDB图数据库引擎经验分享
-
+# ArangoDB图数据库引擎经验分享  
+  
 ## 1.[Arango简介](https://www.arangodb.com/docs/stable/)  
-
+  
 ArangoDB文档结构及参考场景  
-
+  
 ### 1.1.[AramgoDB定位](https://www.arangodb.com)  
-
+  
 ![][2]   
-
+  
 ![][1]  
-
+  
 ![][3]  
-
+  
 ### 1.2.Manual  
-
+  
 - 基本概念  
 - 功能描述  
 - 安装配置  
 - 其他相关内容  
   
-
 使用场景：  
 安装及配置时可根据此文档做参考。  
-
+  
 ### 1.3.AQL  
-
+  
 Arango查询语言。查询语法相关内容。  
 开发过程中，根据接口要求写AQL执行查询时参考。  
-
+  
 实用章节: [Usual Query Patterns][4]  
-
+  
 ### 1.4.HTTP  
-
+  
 通过REST API 提供使用以及管理等操作，功能全面。  
 应用场景:   
 类DDL: Collection 新建，删除，计数，管理SearchView、Graph等相关对象  
 类DML:Truncate，批量导入(upsert)  
-
+  
 ### 1.5.Drivers  
-
+  
 提供多种语言驱动，类似JDBC。  
 应用场景: 在代码中执行AQL查询。  
-
+  
 ## 2.QuickStart  
-
+  
 ### 2.1.安装运行  
-
+  
 ```bash  
   
 #!/usr/bin/env bash  
@@ -62,7 +61,7 @@ docker run -d \
   
   
 # 企业版：  
-docker run -d -p 8529:8529 \   
+docker run -d -p 8529:8529 \  
     -e ARANGO_NO_AUTH=1 \  
     -e ARANGO_LICENSE_KEY=EVALUATION:125f16ada6047bd17eeeefa3f011070510b5fbd9d85122afdeca72c380e7ac83 \  
     --name arangodb-ee \  
@@ -70,48 +69,66 @@ docker run -d -p 8529:8529 \
     arangodb/enterprise:3.4.7  
   
 # Ctrl + P + Q  
-```
+```  
 [Run ArangoDB Enterprise Edition with Docker](https://www.arangodb.com/download-arangodb-enterprise/install-enterprise/docker_/)  
-
+  
 ### 2.2.WebUI  
-
+  
+[<u>http://localhost:8529][5]</u>  
+  
+![][6]  
+  
 ### 2.3.数据模型  
-
+  
 * database  
+      
+    ![][7]  
+  
 * collection  
+      
+    ![][8]  
+  
     * document  
+          
+        ![][9]  
+  
         * _id  
         * _key  
     * edge  
+          
+        ![][10]  
+  
         * _id  
         * _key  
         * _from  
         * _to  
 * view  
       
-    ![][5]  
+    ![][11]  
   
 * graph  
       
-    [Graphs][6]  
+    [Graphs][12]  
+      
+    ![][13]  
   
     * vertex  
     * edge  
     * path  
-
+  
 ### 2.4.AQL示例  
-
-[AQL tutorial][7]  
-
+  
+[AQL tutorial][14]  
+  
 * CURD  
-    * **[<u>Create documents][8]**</u>  
+    * **[<u>Create documents][15]**</u>  
           
         语法：  
         ```sql  
         INSERT document INTO collectionName  
-        ```
+        ```  
         用例：  
-        
+          
         ```sql  
         新建Characters  
         INSERT {  
@@ -121,14 +138,14 @@ docker run -d -p 8529:8529 \
             "age": 41,  
             "traits": ["A","H","C","N","P"]  
         } INTO Characters  
-        ```
-        
+        ```  
+          
         多个导入：  
         ```sql  
         LET data = []  
         FOR d IN data  
             INSERT d INTO Characters  
-        ```
+        ```  
         用例：  
         ```sql  
         LET data = [  
@@ -177,34 +194,34 @@ docker run -d -p 8529:8529 \
         ]  
         FOR d IN data  
             INSERT d INTO Characters  
-        ```
-    
-    * **[<u>Read documents][9]**</u>  
+        ```  
+  
+    * **[<u>Read documents][16]**</u>  
           
         遍历：  
         ```sql  
         FOR c IN Characters  
             RETURN c  
-        ```
-        
+        ```  
+          
         指定：  
         ```sql  
         RETURN Document('Characters/1986')  
         RETURN DOCUMENT("Characters", "1986")  
         RETURN DOCUMENT("Characters", ["1986", "2039"])  
-        ```
-    
-    * **[<u>Update documents][10]**</u>  
+        ```  
+  
+    * **[<u>Update documents][17]**</u>  
           
         语法：  
-        
+          
         ```sql  
           
         UPDATE/REPLACE documentKey WITH object IN collectionName  
           
           
-        ```
-        
+        ```  
+          
         用例：   
         ```sql  
         更新(PATCH)  
@@ -221,31 +238,31 @@ docker run -d -p 8529:8529 \
         遍历更新  
         FOR c IN Characters  
             UPDATE c WITH { season: 1 } IN Characters  
-        ```
-    
-    * **[<u>Delete documents][11]**</u>  
+        ```  
+  
+    * **[<u>Delete documents][18]**</u>  
           
         语法：  
-        
+          
         ```sql  
         REMOVE _key IN Characters  
-        ```
-        
+        ```  
+          
         用例：  
-        
+          
         ```sql  
         REMOVE "2861650" IN Characters  
-        ```
+        ```  
   
 * Graph  
     * 关系及数据准备  
           
         人物关系：  
-         ![][13]   
-        
+         ![][20]   
+          
         新建Collections   
-         ![][12]   
-        
+         ![][19]   
+          
         数据写入  
         ```sql  
         LET data = [  
@@ -312,9 +329,9 @@ docker run -d -p 8529:8529 \
             FILTER parentId != null AND childId != null  
             INSERT { _from: childId, _to: parentId } INTO ChildOf  
             RETURN NEW  
-        ```
-    
-    *  [Traversals语法][14]  
+        ```  
+  
+    *  [Traversals语法][21]  
           
         **Working with collection sets**  
         ```sql  
@@ -325,9 +342,9 @@ docker run -d -p 8529:8529 \
           edgeCollection1, ..., edgeCollectionN  
           [PRUNE pruneCondition]  
           [OPTIONS options]  
-        ```
-        
-        
+        ```  
+          
+          
         **Working with named graphs**   
         ```sql  
         [WITH vertexCollection1[, vertexCollection2[, ...vertexCollectionN]]]  
@@ -337,12 +354,12 @@ docker run -d -p 8529:8529 \
           GRAPH graphName  
           [PRUNE pruneCondition]  
           [OPTIONS options]  
-        ```
-    
+        ```  
+  
     * 用例（匿名图）  
           
         场景一： 子 --> 父  
-        
+          
         ```sql  
         获取Bran的id  
         FOR c IN Characters  
@@ -357,37 +374,37 @@ docker run -d -p 8529:8529 \
             FILTER bran.name == "Bran"  
             FOR v IN 1..1 OUTBOUND bran ChildOf  
                 RETURN v.name  
-        ```
-        
-        
+        ```  
+          
+          
         场景二： 父 --> 子  
         ```sql  
         FOR c IN Characters  
             FILTER c.name == "Ned"  
             FOR v IN 1..1 INBOUND c ChildOf  
                 RETURN v.name  
-        ```
-        
-        
+        ```  
+          
+          
         场景三： 祖 --> 孙  
         ```sql  
         FOR c IN Characters  
             FILTER c.name == "Tywin"  
             FOR v IN 2..2 INBOUND c ChildOf  
                 RETURN DISTINCT v.name  
-        ```
-        
-        
+        ```  
+          
+          
         遍历深度：min..max  
-         ![][15]   
-        
+         ![][22]   
+          
         ```sql  
         FOR c IN Characters  
             FILTER c.name == "Tywin"  
             FOR v IN 0..2 INBOUND c ChildOf  
                 RETURN DISTINCT v.name  
-        ```
-    
+        ```  
+  
     * 图用例  
           
         **Working with named graphs**   
@@ -399,24 +416,24 @@ docker run -d -p 8529:8529 \
           GRAPH graphName  
           [PRUNE pruneCondition]  
           [OPTIONS options]  
-        ```
-        
+        ```  
+          
         用例：  
         ```  
         FOR c IN Characters  
             FILTER c.name == "Tywin"  
             FOR v IN ANY c GRAPH "GOT"  
                 return v.name  
-        ```
-
+        ```  
+  
 ### 2.5.GraphCourse  
-
-附件: [6.GraphCourse.pdf][16]  
-
+  
+附件: [6.GraphCourse.pdf][23]  
+  
 ## 3.Mysql+NiFi+Arango实战  
-
+  
 ### 3.1.数据准备  
-
+  
 mysql数据库：  
 ```bash  
 mkdir -p ~/data/mysql  
@@ -426,13 +443,14 @@ docker run -v ~/data/mysql:/var/lib/mysql \
     -p3306:3306 \  
     -e MYSQL_ROOT_PASSWORD=123456@ \  
     -d mysql:5.7.24  
-```
-
-
-Northwind DDL+DML：[附件Northwind.MySQL5.sql][17]  
-
+```  
+  
+Northwind DDL+DML：[附件Northwind.MySQL5.sql][24]  
+  
+![][25]  
+  
 ### 3.2.Arango Collection  
-
+  
 ```json  
 [  
   {"name": "ProductSupplier", "status": 3, "type": 3},  
@@ -454,38 +472,51 @@ Northwind DDL+DML：[附件Northwind.MySQL5.sql][17]
   {"name": "Suppliers", "status": 3, "type": 2},  
   {"name": "Territories", "status": 3, "type": 2}  
 ]  
-```
-
+```  
+  
 ### 3.3.NiFi  
-
+  
 * DataModeling.sql  
-    附件: [DataModeling_V_E.sql][18]  
+    附件: [DataModeling_V_E.sql][26]  
   
 * arango-northwind.xml  
-    附件: [arango-northwind.xml][19]  
-    
-    ![][20]  
-    
-    
-    ![][21]  
-    
-    ![][22]  
-
+    附件: [arango-northwind.xml][27]  
+      
+    ![][28]  
+      
+      
+    ![][29]  
+      
+    ![][30]  
+  
 ### 3.4.ArangoSearchView  
-
+  
 * 场景  
       
-    输入任意字符串，获取所有与该字符串相匹配的节点信息  
-    
+    输入任意字符串，获取所有与该字符串相匹配的节点信息。  
     ```  
     For v in  ${Collections ...}  
      filter STARTS_WITH(v._search, 'An')  
      return v  
       
-    ```
+    ```  
+    如：  
+    查找”an”开头的所有客户、供应商、产品等相关信息等。  
+      
+    ```sql  
+      
+    for node in Products   
+    filter  starts_with(node.key,1)  
+    limit 10  
+    return node;  
+      
+    Query: AQL: ArangoSearch filter functions EXISTS, STARTS_WITH, IN_RANGE, PHRASE, MIN_MATCH, BOOST and ANALYZER are designed to be used only within a corresponding SEARCH statement of ArangoSearch view. Please ensure function signature is correct. (while executing)  
+    ```  
+      
+      
     问题一： AQL无法支持同时指定多个collection  
     问题二： Filter 子句无法支持`Start_with`算子  
-    ![][23]  
+    ![][31]  
   
 * 定义  
       
@@ -506,9 +537,9 @@ Northwind DDL+DML：[附件Northwind.MySQL5.sql][17]
       }  
     }  
       
-    ```
-    
-    ![][24]  
+    ```  
+      
+    ![][32]  
   
 * 用法  
       
@@ -517,13 +548,13 @@ Northwind DDL+DML：[附件Northwind.MySQL5.sql][17]
     For v in northwind_view   
      search STARTS_WITH(v._search, 'An')  
      return v  
-    ```
-    [ ArangoSearch Views Usage][26]  
-    
-    ![][25]  
-
+    ```  
+    [ ArangoSearch Views Usage][34]  
+      
+    ![][33]  
+  
 ### 3.5.ArangoGraph  
-
+  
 * 场景  
       
     指定任意起点，获取所有与该起点有关联的节点  
@@ -531,9 +562,8 @@ Northwind DDL+DML：[附件Northwind.MySQL5.sql][17]
     for v,e,p in any ${startVertex} ${edges ...}  
     return v,e,p  
       
-    ```
-    
-    
+    ```  
+      
     **Working with collection sets**  
     ```sql  
     [WITH vertexCollection1[, vertexCollection2[, ...vertexCollectionN]]]  
@@ -543,16 +573,25 @@ Northwind DDL+DML：[附件Northwind.MySQL5.sql][17]
       edgeCollection1, ..., edgeCollectionN  
       [PRUNE pruneCondition]  
       [OPTIONS options]  
-    ```
-    
+    ```  
+      
+    如：  
+    根据产品号查找相关销售订单、供应商、等信息；  
+      
+    ```sql  
+    for node in any {"_id":"Products/1"} OrderProduct,ProductSupplier  
+    return node  
+    ```  
+      
     不定义Named Graph也能满足。但是调用方需要维护vertexCollection及其关联的edgeCollection，  
     并在调用查询时，传入edgeCollection。  
-    
+      
+      
     目标：  
     ```sql  
     for v,e,p in any ${startVertex} ${graph}  
     return v,e,p  
-    ```
+    ```  
     调用方只需要传入起点即可获取所有相关连的edge及targetVertex  
   
 * 定义  
@@ -580,41 +619,55 @@ Northwind DDL+DML：[附件Northwind.MySQL5.sql][17]
         "name": "northwind"  
       }  
       
-    ```
-    
-    ![][27]  
-    ![][28]  
+    ```  
+      
+    ![][35]  
+    ![][36]  
   
 * 用法  
       
-    [Traversals][29]  
-
-[1]: assets/rgb.png
-[2]: assets/puk.png
-[3]: assets/qgb.png
-[4]: https://www.arangodb.com/docs/stable/aql/examples.html
-[5]: assets/crj.png
-[6]: https://www.arangodb.com/docs/stable/graphs.html
-[7]: https://www.arangodb.com/docs/stable/aql/tutorial.html
-[8]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#create-documents
-[9]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#read-documents
-[10]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#update-documents
-[11]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#delete-documents
-[12]: assets/fdd.png
-[13]: assets/gdq.png
-[14]: https://www.arangodb.com/docs/stable/aql/graphs-traversals.html
-[15]: assets/esv.png
-[16]: assets/jlc.pdf
-[17]: assets/vhm.sql
-[18]: assets/mkn.sql
-[19]: assets/xuf.xml
-[20]: assets/btl.png
-[21]: assets/ouu.png
-[22]: assets/sju.png
-[23]: assets/eja.png
-[24]: assets/rwu.png
-[25]: assets/olc.png
-[26]: https://www.arangodb.com/docs/stable/aql/views-arango-search.html
-[27]: assets/ing.png
-[28]: assets/dxa.png
-[29]: https://www.arangodb.com/docs/stable/aql/graphs-traversals.html
+    ```sql  
+    for node,e,p in any {"_id":"Products/1"} GRAPH "northwind"  
+    // limit 10  
+    return e._type  
+    ```  
+      
+    Reference：[Traversals][37]  
+  
+[1]: assets/bvq.png  
+[2]: assets/lgh.png  
+[3]: assets/njs.png  
+[4]: https://www.arangodb.com/docs/stable/aql/examples.html  
+[5]: http://localhost:8529/  
+[6]: assets/rpy.png  
+[7]: assets/dkv.png  
+[8]: assets/xqv.png  
+[9]: assets/pvn.png  
+[10]: assets/nfg.png  
+[11]: assets/dej.png  
+[12]: https://www.arangodb.com/docs/stable/graphs.html  
+[13]: assets/uvy.png  
+[14]: https://www.arangodb.com/docs/stable/aql/tutorial.html  
+[15]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#create-documents  
+[16]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#read-documents  
+[17]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#update-documents  
+[18]: https://www.arangodb.com/docs/stable/aql/tutorial-crud.html#delete-documents  
+[19]: assets/acb.png  
+[20]: assets/ind.png  
+[21]: https://www.arangodb.com/docs/stable/aql/graphs-traversals.html  
+[22]: assets/bwg.png  
+[23]: assets/hpw.pdf  
+[24]: assets/occ.sql  
+[25]: assets/qgo.png  
+[26]: assets/xnj.sql  
+[27]: assets/igy.xml  
+[28]: assets/xru.png  
+[29]: assets/jbd.png  
+[30]: assets/ifl.png  
+[31]: assets/hgr.png  
+[32]: assets/upl.png  
+[33]: assets/dex.png  
+[34]: https://www.arangodb.com/docs/stable/aql/views-arango-search.html  
+[35]: assets/tfi.png  
+[36]: assets/dpp.png  
+[37]: https://www.arangodb.com/docs/stable/aql/graphs-traversals.html  
